@@ -6,20 +6,21 @@ library(ggthemes)
 library(gtExtras)
 library(nflreadr)
 library(dplyr)
-pbp <- load_pbp(2013:2023)|>
+library(ggrepel)
+pbp <- load_pbp(2014:most_recent_season())|>
   filter(pass==1)|>
   filter(!is.na(epa))|>
   group_by(id)|>
   summarize(name = first(name), passes = n(), epa_pass=mean(epa), team=first(posteam))|>
   filter(passes>=320)
-clutch_pbp <- load_pbp(2013:2023)|>
+clutch_pbp <- load_pbp(2014:most_recent_season())|>
   filter(pass==1)|>
   filter(!is.na(epa))|>
   filter(game_seconds_remaining <= 300)|>
   filter(wp>=25|wp<=75)|>
   group_by(id)|>
   summarize(name = first(name), clutch_passes = n(), clutch_epa_pass=mean(epa))|>
-  filter(clutch_passes>=200)
+  filter(clutch_passes>=120)
 merged_data <- left_join(pbp, clutch_pbp, by=c("id","name"))|>
   filter(!is.na(clutch_passes))
 merged_data <- left_join(merged_data,teams_colors_logos,by=c("team"="team_abbr"))
@@ -32,12 +33,13 @@ merged_data|>
   geom_abline(slope=1,intercept=0,linetype="dashed")+
   labs(x = "QB EPA Per Dropback",
        y= "QB Clutch EPA Per Dropback",
-       title = "QB EPA Per Dropback and Clutch EPA Per Dropback, 2013-2023",
-       subtitle = "Minimum of 320 passes and 200 clutch passes")+
+       title = "QB EPA Per Dropback and Clutch EPA Per Dropback, 2014-2024",
+       subtitle = "Minimum of 320 passes and 120 clutch passes",
+       caption="By Aariv Iyengar | @AarivAnalytics")+
   theme(panel.grid.major.y=element_blank(),
         plot.title = element_text(size=22,hjust=0.5,face="bold"),
         plot.subtitle = element_text(size=16,hjust=0.5))
-ggsave('EPA_Pass_Clutch_uncaptioned.png',width=14,height=10,dpi="retina")  
+ggsave('EPA_Pass_Clutch.png',width=14,height=10,dpi="retina")  
 merged_data$epa_difference <- merged_data$clutch_epa_pass-merged_data$epa_pass
 merged_data <- merged_data|>
   arrange(-epa_difference)|>
@@ -62,6 +64,6 @@ clutch_gt <- rbind(clutch_qbs,unclutch_qbs)|>
              epa_difference = "Clutch EPA Difference",
              team_wordmark = "")|>
   gt_theme_538()|>
+  tab_header(title = "Clutch Risers and Droppers at Quarterback",subtitle="Since 2014")|>
   gt_hulk_col_numeric(columns=epa_difference)
 gtsave(clutch_gt, "clutch_gt.png")
-  
